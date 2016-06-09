@@ -1,4 +1,17 @@
 # tacta.rb
+require 'json'
+
+def read_contacts
+   json = File.read( 'contacts.json' )
+   array = JSON.parse( json, { :symbolize_names => true } )
+end
+
+def write_contacts( contacts )
+   File.open( "contacts.json", "w" ) do |f|
+      json = JSON.pretty_generate( contacts )
+      f.write( json  )
+   end
+
 
 def index(contacts)
   contacts.each_with_index do |contact, i|
@@ -10,11 +23,20 @@ def action_new( contacts )
    contact = create_new
 
    contacts << contact
+   write_contacts(contacts)
 
    puts
    puts "New contact created:"
    puts
 
+   show( contact )
+   puts
+end
+
+def action_show( contacts, i )
+   contact = contacts[i-1]
+
+   puts
    show( contact )
    puts
 end
@@ -33,11 +55,9 @@ def action_delete( contacts )
    puts
 end
 
-def action_show( contacts, i )
-   contact = contacts[i-1]
-
+def action_error
    puts
-   show( contact )
+   puts "Sorry, I don't recognize that command."
    puts
 end
 
@@ -66,27 +86,36 @@ def ask(prompt)
    gets.chomp
 end
 
-contacts = []
+def contact_exists?(contacts, response)
+  return false unless response =~ /[0-9]+/
+  i = response.to_i
+  !contacts[i-1].nil?
+end
 
-contacts << { name: "Thomas Jefferson", phone: "+1 206 310 1369" , email: "tjeff@us.gov"       }
-contacts << { name: "Charles Darwin"  , phone: "+44 20 7123 4567", email: "darles@evolve.org"  }
-contacts << { name: "Nikola Tesla"    , phone: "+385 43 987 3355", email: "nik@inductlabs.com" }
-contacts << { name: "Genghis Khan"    , phone: "+976 2 194 2222" , email: "contact@empire.com" }
-contacts << { name: "Malcom X"        , phone: "+1 310 155 8822" , email: "x@theroost.org"     }
 
 loop do
-   index( contacts )
+  contacts = read_contacts
 
-   puts
-   response = ask "Who would you like to see (n for new, d for delete, q to quit)? "
+  index( contacts )
 
-   break if response == "q"
+  puts
+  response = ask "Who would you like to see (n for new, d for delete, q to quit)? "
 
-   if response == "n"
-      action_new( contacts )
-   elsif response == "d"
-      action_delete( contacts )
-   else
+  break if response == "q"
+
+  if response == "n"
+    action_new( contacts )
+  elsif response == "d"
+    action_delete( contacts )
+  elsif response =~ /[0-9]+/
+    if contact_exists?(contacts, response)
       action_show( contacts, response.to_i )
-   end
+    else
+      puts
+      puts "That contact does not exist!"
+      puts
+    end
+  else
+    action_error
+  end
 end
